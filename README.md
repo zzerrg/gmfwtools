@@ -106,3 +106,9 @@ writes JFFS2 image into ``/dev/mtdblock0`` device and mounts it:
 2. HiSilicon SoC family uses firmware version 13
 3. ??? SoC family uses firmware version 21
 4. There is firmware version 19, which has "application" firmware partition on offset 0x40000
+
+
+## Feedback
+
+4pda.ru topic where GM8136 based WiFi cameras are discuessed:  https://goo.gl/l1OFps
+
