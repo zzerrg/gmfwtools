@@ -37,6 +37,13 @@ class GMAppFirmware(object):
        22 : "\x9c\xae\x6a\x5a\xe1\xfc\xb0\xa8"   # specific for 22.0.0.x
     }
 
+    EXEC_SZ = {
+       13 : 0x19c7,
+       14 : 0x1b21,
+       21 : 0x1ad5,
+       22 : 0x18c7
+    }
+
 
     def __init__(self, firmware_fn, offset=0, verbose=False, fw_version=None):
         self.fw_version = fw_version  # used in do_pack()
@@ -63,11 +70,7 @@ class GMAppFirmware(object):
             self.h_buf = fi.read(0x20)
             hdr_a = ctypes.cast(ctypes.c_char_p(self.h_buf), GMAppFwHDR_p)
             self.hdr = hdr_a[0]
-            # 13 - 0x19c7
-            # 14 - 0x1b21
-            # 21 - 0x1ad5
-            # 22 - 0x18c7
-            assert self.hdr.exec_sz in (0x19c7, 0x1b21, 0x1ad5, 0x18c7), \
+            assert self.hdr.exec_sz in self.EXEC_SZ.values(), \
                 "Got unknown exec_sz = 0x%04x" % self.hdr.exec_sz
             fw_blob = fi.read()
             self.md5 = hashlib.md5()
