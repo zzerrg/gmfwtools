@@ -32,7 +32,10 @@ GMAppFwHDR_p = ctypes.POINTER(GMAppFwHDR)
 
 class GMAppFirmware(object):
 
-    DES_KEY = "\x9C\xAE\x6A\x5A\xE1\xFC\xB0\x88"  # specific for 14.0.0.x
+    DES_KEY = {
+       14 : "\x9C\xAE\x6A\x5A\xE1\xFC\xB0\x88"   # specific for 14.0.0.x
+    }
+
 
     def __init__(self, firmware_fn, offset=0, verbose=False, fw_version=None):
         self.fw_version = fw_version  # used in do_pack()
@@ -45,6 +48,12 @@ class GMAppFirmware(object):
         self.fw_jffs = None
         self.md5 = None
         self.fw_sig = None
+
+    def des_key(self):
+        ver_major = self.hdr.fw_ver[3]
+        if ver_major not in self.DES_KEY:
+            raise Exception("No DES key for version {}".format(ver_major))
+        return self.DES_KEY[ver_major]
 
     def read_fw(self):
         with open(self.firmware_fn, 'rb') as fi:
@@ -66,7 +75,7 @@ class GMAppFirmware(object):
             self.fw_exec = fw_blob[j_sz:j_sz+self.hdr.exec_sz]
 
     def check_signature(self, exit_on_fail=False):
-        cipher = DES.new(self.DES_KEY, DES.MODE_ECB)
+        cipher = DES.new(self.des_key(), DES.MODE_ECB)
         md5d = self.md5.digest()
         sig0 = cipher.decrypt(md5d[0:8])
         sig1 = cipher.decrypt(md5d[8:16])
@@ -82,7 +91,7 @@ class GMAppFirmware(object):
         return is_ok
 
     def calc_fw_signature(self):
-        cipher = DES.new(self.DES_KEY, DES.MODE_ECB)
+        cipher = DES.new(self.des_key(), DES.MODE_ECB)
         md5d = self.md5.digest()
         sig0 = cipher.decrypt(md5d[0:8])
         sig1 = cipher.decrypt(md5d[8:16])
@@ -100,7 +109,7 @@ class GMAppFirmware(object):
             # print("csum   : %s %s" %
             #       (binascii.b2a_hex(self.hdr.csum[0:8]),
             #        binascii.b2a_hex(self.hdr.csum[8:16])))
-            print("des key: %s" % binascii.b2a_hex(self.DES_KEY))
+            print("des key: %s" % binascii.b2a_hex(self.des_key()))
             # print("key len: %d" % len(key))
             print("md5    : %s" % (self.md5.hexdigest()))
         is_ok = self.check_signature()
