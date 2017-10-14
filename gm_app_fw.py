@@ -211,7 +211,6 @@ class GMAppFirmware(object):
         self.md5 = hashlib.md5()
         fw_blob = self.fw_jffs + self.fw_exec
         self.md5.update(fw_blob)
-        self.calc_fw_signature()
         self.pack_header()
         print("Calculated fw_sig: %s" %
               binascii.b2a_hex(self.fw_sig))
@@ -224,14 +223,9 @@ class GMAppFirmware(object):
             fo.write(fw_blob)
 
     def pack_header(self):
-        self.hdr = GMAppFwHDR()
-        self.hdr.z00 = 0
-        self.hdr.jffs_sz = len(self.fw_jffs)
-        self.hdr.exec_sz = len(self.fw_exec)
-        self.hdr.csum = self.fw_sig
         if self.fw_version is None:
             # default is 14.0.0.75
-            self.hdr.fw_ver = B4(75, 0, 0, 14)
+            version = B4(75, 0, 0, 14)
         else:
             m = re.match(r'(14)\.(0+)\.(\d+)\.(\d+)', self.fw_version)
             if not m:
@@ -240,7 +234,14 @@ class GMAppFirmware(object):
             v2 = int(m.group(2))
             v3 = int(m.group(3))
             v4 = int(m.group(4))
-            self.hdr.fw_ver = B4(v4, v3, v2, v1)
+            version = B4(v4, v3, v2, v1)
+        self.hdr = GMAppFwHDR()
+        self.hdr.fw_ver = version
+        self.hdr.z00 = 0
+        self.hdr.jffs_sz = len(self.fw_jffs)
+        self.hdr.exec_sz = len(self.fw_exec)
+        self.calc_fw_signature()
+        self.hdr.csum = self.fw_sig
         print("Build FW version {3}.{2}.{1}.{0}".format(*(self.hdr.fw_ver)))
 
 
