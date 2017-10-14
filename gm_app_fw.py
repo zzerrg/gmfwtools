@@ -227,7 +227,8 @@ class GMAppFirmware(object):
             # default is 14.0.0.75
             version = B4(75, 0, 0, 14)
         else:
-            m = re.match(r'(14)\.(0+)\.(\d+)\.(\d+)', self.fw_version)
+            supported_versions = "|".join([str(v) for v in list(self.EXEC_SZ)])
+            m = re.match(r'('+supported_versions+')\.(0+)\.(\d+)\.(\d+)', self.fw_version)
             if not m:
                 raise RuntimeError("%s: incorrect version" % self.fw_version)
             v1 = int(m.group(1))
