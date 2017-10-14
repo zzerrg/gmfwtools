@@ -33,7 +33,8 @@ GMAppFwHDR_p = ctypes.POINTER(GMAppFwHDR)
 class GMAppFirmware(object):
 
     DES_KEY = {
-       14 : "\x9C\xAE\x6A\x5A\xE1\xFC\xB0\x88"   # specific for 14.0.0.x
+       14 : "\x9C\xAE\x6A\x5A\xE1\xFC\xB0\x88",  # specific for 14.0.0.x
+       22 : "\x9c\xae\x6a\x5a\xe1\xfc\xb0\xa8"   # specific for 22.0.0.x
     }
 
 
@@ -65,7 +66,8 @@ class GMAppFirmware(object):
             # 13 - 0x19c7
             # 14 - 0x1b21
             # 21 - 0x1ad5
-            assert self.hdr.exec_sz in (0x19c7, 0x1b21, 0x1ad5), \
+            # 22 - 0x18c7
+            assert self.hdr.exec_sz in (0x19c7, 0x1b21, 0x1ad5, 0x18c7), \
                 "Got unknown exec_sz = 0x%04x" % self.hdr.exec_sz
             fw_blob = fi.read()
             self.md5 = hashlib.md5()
