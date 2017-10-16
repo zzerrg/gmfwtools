@@ -23,7 +23,7 @@ class GMAppFwHDR(ctypes.Structure):
     _fields_ = [
         ('z00', ctypes.c_uint32),     # 0x00000000
         ('jffs_sz', ctypes.c_uint32),  # JFFS image size
-        ('exec_sz', ctypes.c_uint32),  # 0x1b21 - 14.0.0.x, 0x1ad5 - 21.0.0.x
+        ('exec_sz', ctypes.c_uint32),  # See EXEC_SZ list below
         ('csum', C16),
         ('fw_ver', B4),
     ]
@@ -33,6 +33,7 @@ GMAppFwHDR_p = ctypes.POINTER(GMAppFwHDR)
 class GMAppFirmware(object):
 
     DES_KEY = {
+       13 : "\x9c\xae\x6a\x5a\xe1\xfc\xb0\x82",  # specific for 13.0.0.x
        14 : "\x9C\xAE\x6A\x5A\xE1\xFC\xB0\x88",  # specific for 14.0.0.x
        22 : "\x9c\xae\x6a\x5a\xe1\xfc\xb0\xa8"   # specific for 22.0.0.x
     }
