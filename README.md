@@ -15,7 +15,11 @@ firmware version, UNIX timestamp of the image and some supplementary attributes.
 
 ## Verify signature of the 'npcupg' firmware
 
-At this moment ``gm_app_fw.py`` contains DES key to check signature of FW version 14.
+At this moment ``gm_app_fw.py`` contains some DES key to check signature of FW. Following
+versions are currently supported:
+  * Version 13.x.x.x
+  * Version 14.x.x.x
+  * Version 22.x.x.x
 
     $ ./gm_app_fw.py -f ../npcupg_14.00.00.75.bin -v
     fw_ver : 14.00.00.75
