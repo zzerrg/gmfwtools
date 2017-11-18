@@ -261,6 +261,7 @@ def main():
     parser.add_argument('-V', '--version', dest='fw_version',
                         help='FW version, should match 14.0.N.N pattern')
     parser.add_argument('-d', '--debug', action='store_true')
+    parser.add_argument('-t', '--target', dest='target')
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-v', '--verify', action='store_true')
     group.add_argument('-u', '--unpack', action='store_true')
@@ -282,7 +283,10 @@ def main():
     elif args.unpack:
         fw.do_unpack(args.out_fn, args.exec_fn)
     elif args.mount:
-        fw.do_mount()
+        if args.target:
+            fw.do_mount(mpoint=args.target)
+        else:
+            fw.do_mount()
     elif args.pack:
         fw.do_pack(args.jffs_image, args.exec_fn)
     else:
