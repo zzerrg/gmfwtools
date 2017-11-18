@@ -87,6 +87,9 @@ writes JFFS2 image into ``/dev/mtdblock0`` device and mounts it:
     Filesystem      Size  Used Avail Use% Mounted on
     /dev/mtdblock0   16M  3.5M   13M  22% /mnt/fw_app
 
+If you want to mount the filesystem to another directory than /mnt/fw_app
+use the ``-t <mount-dir>`` parameter to override.
+
 *Please note*: this command requires root privileges on Linux.
 
 ## Pack and sign 'npcupg' firmware from JFFS2 image
