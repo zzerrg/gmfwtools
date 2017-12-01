@@ -51,7 +51,7 @@ FW ver 19 contains "APP" image at offset 0x40000
     sig ok : False
 
 
-Also it recognized header of FW version 13, 19, 21 but can't verify the
+Also it recognized header of FW version 19, 21 but can't verify the
 signature nor pack and sign modified JFFS2 image.
 
 ## Unpack 'npcupg' firmware
