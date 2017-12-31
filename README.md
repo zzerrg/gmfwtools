@@ -20,6 +20,7 @@ versions are currently supported:
   * Version 13.x.x.x
   * Version 14.x.x.x
   * Version 22.x.x.x
+  * Version 23.x.x.x
 
     $ ./gm_app_fw.py -f ../npcupg_14.00.00.75.bin -v
     fw_ver : 14.00.00.75

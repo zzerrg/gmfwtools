@@ -35,14 +35,16 @@ class GMAppFirmware(object):
     DES_KEY = {
        13 : "\x9c\xae\x6a\x5a\xe1\xfc\xb0\x82",  # specific for 13.0.0.x
        14 : "\x9C\xAE\x6A\x5A\xE1\xFC\xB0\x88",  # specific for 14.0.0.x
-       22 : "\x9c\xae\x6a\x5a\xe1\xfc\xb0\xa8"   # specific for 22.0.0.x
+       22 : "\x9c\xae\x6a\x5a\xe1\xfc\xb0\xa8",  # specific for 22.0.0.x
+       23 : "\x9c\xae\x6a\x5a\xe1\xfc\xb0\xeb"   # specific for 23.0.0.x
     }
 
     EXEC_SZ = {
        13 : 0x19c7,
        14 : 0x1b21,
        21 : 0x1ad5,
-       22 : 0x18c7
+       22 : 0x18c7,
+       23 : 0x18c7
     }
 
 
