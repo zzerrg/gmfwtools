@@ -66,6 +66,10 @@ class GMAppFirmware(object):
             raise Exception("No DES key for version {}".format(ver_major))
         return self.DES_KEY[ver_major]
 
+    def des_decrypt(self, data):
+        cipher = DES.new(self.des_key(), DES.MODE_ECB)
+        return cipher.decrypt(data)
+
     def read_fw(self):
         with open(self.firmware_fn, 'rb') as fi:
             # fsize = fi.seek(0, 2)
@@ -83,11 +87,7 @@ class GMAppFirmware(object):
             self.fw_exec = fw_blob[j_sz:j_sz+self.hdr.exec_sz]
 
     def check_signature(self, exit_on_fail=False):
-        cipher = DES.new(self.des_key(), DES.MODE_ECB)
-        md5d = self.md5.digest()
-        sig0 = cipher.decrypt(md5d[0:8])
-        sig1 = cipher.decrypt(md5d[8:16])
-        self.fw_sig = str(sig0 + sig1)
+        self.fw_sig = self.des_decrypt(self.md5.digest())
         # if self.verbose:
         #    print("ECB dec: %s %s" %
         #          (binascii.b2a_hex(sig0), binascii.b2a_hex(sig1)))
@@ -99,11 +99,7 @@ class GMAppFirmware(object):
         return is_ok
 
     def calc_fw_signature(self):
-        cipher = DES.new(self.des_key(), DES.MODE_ECB)
-        md5d = self.md5.digest()
-        sig0 = cipher.decrypt(md5d[0:8])
-        sig1 = cipher.decrypt(md5d[8:16])
-        self.fw_sig = str(sig0 + sig1)
+        self.fw_sig = self.des_decrypt(self.md5.digest())
 
     def do_verify(self):
         self.read_fw()
