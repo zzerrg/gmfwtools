@@ -15,7 +15,12 @@ firmware version, UNIX timestamp of the image and some supplementary attributes.
 
 ## Verify signature of the 'npcupg' firmware
 
-At this moment ``gm_app_fw.py`` contains DES key to check signature of FW version 14.
+At this moment ``gm_app_fw.py`` contains some DES key to check signature of FW. Following
+versions are currently supported:
+  * Version 13.x.x.x
+  * Version 14.x.x.x
+  * Version 22.x.x.x
+  * Version 23.x.x.x
 
     $ ./gm_app_fw.py -f ../npcupg_14.00.00.75.bin -v
     fw_ver : 14.00.00.75
@@ -47,7 +52,7 @@ FW ver 19 contains "APP" image at offset 0x40000
     sig ok : False
 
 
-Also it recognized header of FW version 13, 19, 21 but can't verify the
+Also it recognized header of FW version 19, 21 but can't verify the
 signature nor pack and sign modified JFFS2 image.
 
 ## Unpack 'npcupg' firmware
@@ -82,6 +87,9 @@ writes JFFS2 image into ``/dev/mtdblock0`` device and mounts it:
     # df -h /mnt/fw_app/
     Filesystem      Size  Used Avail Use% Mounted on
     /dev/mtdblock0   16M  3.5M   13M  22% /mnt/fw_app
+
+If you want to mount the filesystem to another directory than /mnt/fw_app
+use the ``-t <mount-dir>`` parameter to override.
 
 *Please note*: this command requires root privileges on Linux.
 

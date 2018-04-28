@@ -23,7 +23,7 @@ class GMAppFwHDR(ctypes.Structure):
     _fields_ = [
         ('z00', ctypes.c_uint32),     # 0x00000000
         ('jffs_sz', ctypes.c_uint32),  # JFFS image size
-        ('exec_sz', ctypes.c_uint32),  # 0x1b21 - 14.0.0.x, 0x1ad5 - 21.0.0.x
+        ('exec_sz', ctypes.c_uint32),  # See EXEC_SZ list below
         ('csum', C16),
         ('fw_ver', B4),
     ]
@@ -32,7 +32,21 @@ GMAppFwHDR_p = ctypes.POINTER(GMAppFwHDR)
 
 class GMAppFirmware(object):
 
-    DES_KEY = "\x9C\xAE\x6A\x5A\xE1\xFC\xB0\x88"  # specific for 14.0.0.x
+    DES_KEY = {
+       13 : "\x9c\xae\x6a\x5a\xe1\xfc\xb0\x82",  # specific for 13.0.0.x
+       14 : "\x9C\xAE\x6A\x5A\xE1\xFC\xB0\x88",  # specific for 14.0.0.x
+       22 : "\x9c\xae\x6a\x5a\xe1\xfc\xb0\xa8",  # specific for 22.0.0.x
+       23 : "\x9c\xae\x6a\x5a\xe1\xfc\xb0\xeb"   # specific for 23.0.0.x
+    }
+
+    EXEC_SZ = {
+       13 : 0x19c7,
+       14 : 0x1b21,
+       21 : 0x1ad5,
+       22 : 0x18c7,
+       23 : 0x18c7
+    }
+
 
     def __init__(self, firmware_fn, offset=0, verbose=False, fw_version=None):
         self.fw_version = fw_version  # used in do_pack()
@@ -46,6 +60,16 @@ class GMAppFirmware(object):
         self.md5 = None
         self.fw_sig = None
 
+    def des_key(self):
+        ver_major = self.hdr.fw_ver[3]
+        if ver_major not in self.DES_KEY:
+            raise Exception("No DES key for version {}".format(ver_major))
+        return self.DES_KEY[ver_major]
+
+    def des_decrypt(self, data):
+        cipher = DES.new(self.des_key(), DES.MODE_ECB)
+        return cipher.decrypt(data)
+
     def read_fw(self):
         with open(self.firmware_fn, 'rb') as fi:
             # fsize = fi.seek(0, 2)
@@ -53,10 +77,7 @@ class GMAppFirmware(object):
             self.h_buf = fi.read(0x20)
             hdr_a = ctypes.cast(ctypes.c_char_p(self.h_buf), GMAppFwHDR_p)
             self.hdr = hdr_a[0]
-            # 13 - 0x19c7
-            # 14 - 0x1b21
-            # 21 - 0x1ad5
-            assert self.hdr.exec_sz in (0x19c7, 0x1b21, 0x1ad5), \
+            assert self.hdr.exec_sz in self.EXEC_SZ.values(), \
                 "Got unknown exec_sz = 0x%04x" % self.hdr.exec_sz
             fw_blob = fi.read()
             self.md5 = hashlib.md5()
@@ -66,11 +87,7 @@ class GMAppFirmware(object):
             self.fw_exec = fw_blob[j_sz:j_sz+self.hdr.exec_sz]
 
     def check_signature(self, exit_on_fail=False):
-        cipher = DES.new(self.DES_KEY, DES.MODE_ECB)
-        md5d = self.md5.digest()
-        sig0 = cipher.decrypt(md5d[0:8])
-        sig1 = cipher.decrypt(md5d[8:16])
-        self.fw_sig = str(sig0 + sig1)
+        self.fw_sig = self.des_decrypt(self.md5.digest())
         # if self.verbose:
         #    print("ECB dec: %s %s" %
         #          (binascii.b2a_hex(sig0), binascii.b2a_hex(sig1)))
@@ -82,11 +99,7 @@ class GMAppFirmware(object):
         return is_ok
 
     def calc_fw_signature(self):
-        cipher = DES.new(self.DES_KEY, DES.MODE_ECB)
-        md5d = self.md5.digest()
-        sig0 = cipher.decrypt(md5d[0:8])
-        sig1 = cipher.decrypt(md5d[8:16])
-        self.fw_sig = str(sig0 + sig1)
+        self.fw_sig = self.des_decrypt(self.md5.digest())
 
     def do_verify(self):
         self.read_fw()
@@ -100,7 +113,7 @@ class GMAppFirmware(object):
             # print("csum   : %s %s" %
             #       (binascii.b2a_hex(self.hdr.csum[0:8]),
             #        binascii.b2a_hex(self.hdr.csum[8:16])))
-            print("des key: %s" % binascii.b2a_hex(self.DES_KEY))
+            print("des key: %s" % binascii.b2a_hex(self.des_key()))
             # print("key len: %d" % len(key))
             print("md5    : %s" % (self.md5.hexdigest()))
         is_ok = self.check_signature()
@@ -197,7 +210,6 @@ class GMAppFirmware(object):
         self.md5 = hashlib.md5()
         fw_blob = self.fw_jffs + self.fw_exec
         self.md5.update(fw_blob)
-        self.calc_fw_signature()
         self.pack_header()
         print("Calculated fw_sig: %s" %
               binascii.b2a_hex(self.fw_sig))
@@ -210,23 +222,26 @@ class GMAppFirmware(object):
             fo.write(fw_blob)
 
     def pack_header(self):
-        self.hdr = GMAppFwHDR()
-        self.hdr.z00 = 0
-        self.hdr.jffs_sz = len(self.fw_jffs)
-        self.hdr.exec_sz = len(self.fw_exec)
-        self.hdr.csum = self.fw_sig
         if self.fw_version is None:
             # default is 14.0.0.75
-            self.hdr.fw_ver = B4(75, 0, 0, 14)
+            version = B4(75, 0, 0, 14)
         else:
-            m = re.match(r'(14)\.(0+)\.(\d+)\.(\d+)', self.fw_version)
+            supported_versions = "|".join([str(v) for v in list(self.EXEC_SZ)])
+            m = re.match(r'('+supported_versions+')\.(0+)\.(\d+)\.(\d+)', self.fw_version)
             if not m:
                 raise RuntimeError("%s: incorrect version" % self.fw_version)
             v1 = int(m.group(1))
             v2 = int(m.group(2))
             v3 = int(m.group(3))
             v4 = int(m.group(4))
-            self.hdr.fw_ver = B4(v4, v3, v2, v1)
+            version = B4(v4, v3, v2, v1)
+        self.hdr = GMAppFwHDR()
+        self.hdr.fw_ver = version
+        self.hdr.z00 = 0
+        self.hdr.jffs_sz = len(self.fw_jffs)
+        self.hdr.exec_sz = len(self.fw_exec)
+        self.calc_fw_signature()
+        self.hdr.csum = self.fw_sig
         print("Build FW version {3}.{2}.{1}.{0}".format(*(self.hdr.fw_ver)))
 
 
@@ -244,6 +259,7 @@ def main():
     parser.add_argument('-V', '--version', dest='fw_version',
                         help='FW version, should match 14.0.N.N pattern')
     parser.add_argument('-d', '--debug', action='store_true')
+    parser.add_argument('-t', '--target', dest='target')
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-v', '--verify', action='store_true')
     group.add_argument('-u', '--unpack', action='store_true')
@@ -265,7 +281,10 @@ def main():
     elif args.unpack:
         fw.do_unpack(args.out_fn, args.exec_fn)
     elif args.mount:
-        fw.do_mount()
+        if args.target:
+            fw.do_mount(mpoint=args.target)
+        else:
+            fw.do_mount()
     elif args.pack:
         fw.do_pack(args.jffs_image, args.exec_fn)
     else:
