@@ -221,6 +221,62 @@ class GMAppFirmware(object):
             fo.write(buf)
             fo.write(fw_blob)
 
+    def do_key(self, npc_binary, brute):
+        self.read_fw()
+        key_len = 8
+        key_prefix = b"\x9c\xae\x6a\x5a\xe1\xfc"
+        if not brute:
+            with open(npc_binary, 'rb') as fo:
+                binary = fo.read()
+                fo.close()
+            self.do_key_search(binary, key_prefix, key_len)
+        else:
+            self.do_key_brute(key_prefix, key_len)
+
+    def do_key_search(self, binary, key_prefix, key_len):
+        cnt = 1
+        key_offset = 0
+        print("Try finding key in %d bytes..." % (len(binary)))
+        while binary.find(key_prefix) != -1:
+            key_pos = binary.find(key_prefix)
+            key = binary[key_pos:key_pos+key_len]
+            if len(key) == key_len:
+                self.DES_KEY[self.hdr.fw_ver[3]] = key
+                if self.check_signature():
+                    print("Found key %d at %d: %s" % (cnt, key_offset + key_pos, binascii.hexlify(key)))
+                    self.do_verify()
+                    return
+                print("Tried key %d at %d: %s" % (cnt, key_offset + key_pos, binascii.hexlify(key)))
+                cnt = cnt + 1
+                key_pos = key_pos + len(key)
+            else:
+                key_pos = key_pos + 1
+            binary = binary[key_pos:]
+            key_offset = key_offset + key_pos
+
+    def do_key_brute(self, key_prefix, key_len):
+        brute_len = key_len - len(key_prefix)
+        key_cnt = 255 ** brute_len
+        print("Trying brute forcing %d keys with prefix %s..." % (key_cnt, binascii.hexlify(key_prefix)))
+        i = 0
+        p = 0
+        while i < key_cnt:
+            n = i
+            key_gen = b""
+            for j in range(0, brute_len):
+                key_gen = bytearray((n % 256,)) + key_gen
+                n = int(n / 256)
+            key_gen = key_prefix + key_gen
+            self.DES_KEY[self.hdr.fw_ver[3]] = bytes(key_gen)
+            if self.check_signature():
+                print("Found key %d: %s" % (i, binascii.hexlify(key_gen)))
+                self.do_verify()
+                return
+            elif p != int(i*100/key_cnt):
+                p = int(i*100/key_cnt)
+                print("Checked %d%% (%d keys, current %s)..." % (p, i, binascii.hexlify(key_gen)))
+            i = i + 1
+
     def pack_header(self):
         if self.fw_version is None:
             # default is 14.0.0.75
@@ -265,6 +321,8 @@ def main():
     group.add_argument('-u', '--unpack', action='store_true')
     group.add_argument('-m', '--mount', action='store_true')
     group.add_argument('-p', '--pack', action='store_true')
+    group.add_argument('-k', '--key', dest='key', help='Try finding key in npc binary')
+    group.add_argument('-kb', '--key-brute', dest='keybrute', action='store_true', help='Try brute forcing key')
     args = parser.parse_args()
     if args.offset:
         if args.offset[0:2] == '0x':
@@ -287,6 +345,10 @@ def main():
             fw.do_mount()
     elif args.pack:
         fw.do_pack(args.jffs_image, args.exec_fn)
+    elif args.key:
+        fw.do_key(args.key, False)
+    elif args.keybrute:
+        fw.do_key(None, True)
     else:
         print("Usage: one of -v, -u or -p options should be specified")
         sys.exit(os.EX_USAGE)
