@@ -33,21 +33,22 @@ GMAppFwHDR_p = ctypes.POINTER(GMAppFwHDR)
 class GMAppFirmware(object):
 
     DES_KEY = {
-       13 : "\x9c\xae\x6a\x5a\xe1\xfc\xb0\x82",  # specific for 13.0.0.x
-       14 : "\x9C\xAE\x6A\x5A\xE1\xFC\xB0\x88",  # specific for 14.0.0.x
-       21 : "\x9c\xae\x6a\x5a\xe1\xfc\xb0\x98",  # specific for 21.0.0.x
-       22 : "\x9c\xae\x6a\x5a\xe1\xfc\xb0\xa8",  # specific for 22.0.0.x
-       23 : "\x9c\xae\x6a\x5a\xe1\xfc\xb0\xeb"   # specific for 23.0.0.x
+        "13.0": b"\x9c\xae\x6a\x5a\xe1\xfc\xb0\x82",  # specific for 13.0.0.x
+        "13.1": b"\x9c\xae\x6a\x5a\xe1\xfe\xb1\x89",  # specific for 13.1.0.x
+        "14.0": b"\x9C\xAE\x6A\x5A\xE1\xFC\xB0\x88",  # specific for 14.0.0.x
+        "21.0": b"\x9c\xae\x6a\x5a\xe1\xfc\xb0\x98",  # specific for 21.0.0.x
+        "22.0": b"\x9c\xae\x6a\x5a\xe1\xfc\xb0\xa8",  # specific for 22.0.0.x
+        "23.0": b"\x9c\xae\x6a\x5a\xe1\xfc\xb0\xeb"   # specific for 23.0.0.x
     }
 
     EXEC_SZ = {
-       13 : 0x19c7,
-       14 : 0x1b21,
-       21 : 0x1ad5,
-       22 : 0x18c7,
-       23 : 0x18c7
+        "13.0": 0x19c7,
+        "13.1": 0x1614,
+        "14.0": 0x1b21,
+        "21.0": 0x1ad5,
+        "22.0": 0x18c7,
+        "23.0": 0x18c7
     }
-
 
     def __init__(self, firmware_fn, offset=0, verbose=False, fw_version=None):
         self.fw_version = fw_version  # used in do_pack()
@@ -61,11 +62,14 @@ class GMAppFirmware(object):
         self.md5 = None
         self.fw_sig = None
 
+    def get_fw_ver(self):
+        return "%d.%d" % (self.hdr.fw_ver[3], self.hdr.fw_ver[2])
+
     def des_key(self):
-        ver_major = self.hdr.fw_ver[3]
-        if ver_major not in self.DES_KEY:
-            raise Exception("No DES key for version {}".format(ver_major))
-        return self.DES_KEY[ver_major]
+        fw_ver = self.get_fw_ver()
+        if fw_ver not in self.DES_KEY:
+            raise Exception("No DES key for version {}".format(fw_ver))
+        return self.DES_KEY[fw_ver]
 
     def des_decrypt(self, data):
         cipher = DES.new(self.des_key(), DES.MODE_ECB)
@@ -92,7 +96,7 @@ class GMAppFirmware(object):
         # if self.verbose:
         #    print("ECB dec: %s %s" %
         #          (binascii.b2a_hex(sig0), binascii.b2a_hex(sig1)))
-        is_ok = self.fw_sig == str(self.hdr.csum)
+        is_ok = str(self.fw_sig) == str(self.hdr.csum)
         if not is_ok and exit_on_fail:
             print("%s: fw signature mismatch" % self.firmware_fn,
                   file=sys.stderr)
@@ -242,12 +246,14 @@ class GMAppFirmware(object):
             key_pos = binary.find(key_prefix)
             key = binary[key_pos:key_pos+key_len]
             if len(key) == key_len:
-                self.DES_KEY[self.hdr.fw_ver[3]] = key
+                self.DES_KEY[self.get_fw_ver()] = key
                 if self.check_signature():
-                    print("Found key %d at %d: %s" % (cnt, key_offset + key_pos, binascii.hexlify(key)))
+                    print("Found key %d at %d: %s" %
+                          (cnt, key_offset + key_pos, binascii.hexlify(key)))
                     self.do_verify()
                     return
-                print("Tried key %d at %d: %s" % (cnt, key_offset + key_pos, binascii.hexlify(key)))
+                print("Tried key %d at %d: %s" %
+                      (cnt, key_offset + key_pos, binascii.hexlify(key)))
                 cnt = cnt + 1
                 key_pos = key_pos + len(key)
             else:
@@ -258,7 +264,8 @@ class GMAppFirmware(object):
     def do_key_brute(self, key_prefix, key_len):
         brute_len = key_len - len(key_prefix)
         key_cnt = 255 ** brute_len
-        print("Trying brute forcing %d keys with prefix %s..." % (key_cnt, binascii.hexlify(key_prefix)))
+        print("Trying brute forcing %d keys with prefix %s..." %
+              (key_cnt, binascii.hexlify(key_prefix)))
         i = 0
         p = 0
         while i < key_cnt:
@@ -268,14 +275,15 @@ class GMAppFirmware(object):
                 key_gen = bytearray((n % 256,)) + key_gen
                 n = int(n / 256)
             key_gen = key_prefix + key_gen
-            self.DES_KEY[self.hdr.fw_ver[3]] = bytes(key_gen)
+            self.DES_KEY[self.get_fw_ver()] = bytes(key_gen)
             if self.check_signature():
                 print("Found key %d: %s" % (i, binascii.hexlify(key_gen)))
                 self.do_verify()
                 return
             elif p != int(i*100/key_cnt):
                 p = int(i*100/key_cnt)
-                print("Checked %d%% (%d keys, current %s)..." % (p, i, binascii.hexlify(key_gen)))
+                print("Checked %d%% (%d keys, current %s)..." %
+                      (p, i, binascii.hexlify(key_gen)))
             i = i + 1
 
     def pack_header(self):
@@ -283,8 +291,10 @@ class GMAppFirmware(object):
             # default is 14.0.0.75
             version = B4(75, 0, 0, 14)
         else:
-            supported_versions = "|".join([str(v) for v in list(self.EXEC_SZ)])
-            m = re.match(r'('+supported_versions+')\.(0+)\.(\d+)\.(\d+)', self.fw_version)
+            supported_versions = "|".join([v.split('.')[0]
+                                           for v in list(self.EXEC_SZ)])
+            m = re.match(r'('+supported_versions+')\.(\d+)\.(\d+)\.(\d+)',
+                         self.fw_version)
             if not m:
                 raise RuntimeError("%s: incorrect version" % self.fw_version)
             v1 = int(m.group(1))
@@ -302,7 +312,7 @@ class GMAppFirmware(object):
         print("Build FW version {3}.{2}.{1}.{0}".format(*(self.hdr.fw_ver)))
 
 
-def main():
+def get_args():
     parser = argparse.ArgumentParser(prog='gm_app_fw.py')
     parser.add_argument('-f', dest='fn',
                         help='file name fw binary',
@@ -322,9 +332,14 @@ def main():
     group.add_argument('-u', '--unpack', action='store_true')
     group.add_argument('-m', '--mount', action='store_true')
     group.add_argument('-p', '--pack', action='store_true')
-    group.add_argument('-k', '--key', dest='key', help='Try finding key in npc binary')
-    group.add_argument('-kb', '--key-brute', dest='keybrute', action='store_true', help='Try brute forcing key')
-    args = parser.parse_args()
+    group.add_argument('-k', '--key', dest='key',
+                       help='Try finding key in npc binary')
+    group.add_argument('-kb', '--key-brute', dest='keybrute',
+                       action='store_true', help='Try brute forcing key')
+    return parser.parse_args()
+
+
+def main(args):
     if args.offset:
         if args.offset[0:2] == '0x':
             offset = int(args.offset[2:], 16)
@@ -356,4 +371,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    args = get_args()
+    main(args)

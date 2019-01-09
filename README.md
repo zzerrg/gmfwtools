@@ -22,11 +22,13 @@ versions are currently supported:
   * Version 22.x.x.x
   * Version 23.x.x.x
 
+
     $ ./gm_app_fw.py -f ../npcupg_14.00.00.75.bin -v
     fw_ver : 14.00.00.75
     fs size: 3126713
     csum   : 784b58459a68c5d53aebc572ab39e558
     sig ok : True
+
 
 On other versions it fails:
 
@@ -110,13 +112,14 @@ use the ``-t <mount-dir>`` parameter to override.
 
 ## Firmware versions
 
-1. GM8136/GM8135S SoC family  uses firmware version 14
-2. HiSilicon SoC family uses firmware version 13
-3. ??? SoC family uses firmware version 21
-4. There is firmware version 19, which has "application" firmware partition on offset 0x40000
+1. HiSilicon Hi3518E, 3518E V100 16M flash uses firmware version 13
+2. Novatek / GrainMedia GM8136/GM8135S SoC 720p/960p/1080p 16M flash uses firmware version 14
+3. Novatek / GrainMedia GM8136/GM8135S SoC 720p/960p 8M flash uses firmware version 21.0
+4. Novatek / GrainMedia GM8136/GM8135S SoC 1080p 8M flash uses firmware version 21.1
+5. Goke GK7101/GK7102, 7101/7102 16M uses firmware version 22
+6. There is firmware version 19, which has "application" firmware partition on offset 0x40000
 
 
 ## Feedback
 
 4pda.ru topic where GM8136 based WiFi cameras are discuessed:  https://goo.gl/l1OFps
-
